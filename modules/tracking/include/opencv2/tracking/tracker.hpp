@@ -1189,6 +1189,55 @@ class CV_EXPORTS_W TrackerTLD : public Tracker
   BOILERPLATE_CODE("TLD",TrackerTLD);
 };
 
+/**
+ \brief KCF tracker implementation.
+Implementation of "High-Speed Tracking with Kernelized Correlation Filters" by J. F. Henriques, R. Caseiro, P. Martins and J. Batista.
+ */
+class CV_EXPORTS_W KCFTracker : public Tracker
+{
+ public:
+    struct CV_EXPORTS Params
+    {
+      Params();       
+      double interp_factor; // linear interpolation factor for adaptation
+      double sigma; // gaussian kernel bandwidth
+      double lambda; // regularization
+      int cell_size; // HOG cell size
+      double paddingx; // extra area surrounding the target - x
+      double paddingy; // extra area surrounding the target - y
+      double output_sigma_factor; // bandwidth of gaussian target
+      int template_size; // template size
+      double scale_step; // scale step for multi-scale estimation
+      double scale_weight;  // to downweight detection scores of other scales for added stability
+
+      void read( const cv::FileNode& fn );
+      void write( cv::FileStorage& fs ) const;
+    };
+    virtual void init(const cv::Rect &roi, cv::Mat image);   
+    virtual cv::Rect update(cv::Mat image);
+
+  protected:
+    // Detect object in the current frame.
+    cv::Point detect(cv::Mat z, cv::Mat x, float sigma, double &peak_value);
+
+    // train tracker with a single image
+    cv::Mat train(cv::Mat x, const cv::Mat &prob, float sigma, float lambda);
+
+    // Evaluates a Gaussian kernel with bandwidth SIGMA for all relative shifts between input images X and Y, which must both be MxN. They must    also be periodic (ie., pre-processed with a cosine window).
+    cv::Mat gaussianCorrelation(cv::Mat x1, cv::Mat x2, float sigma);
+
+    // Create Gaussian Peak. Function called only in the first frame.
+    cv::Mat createGaussianPeak(int sizey, int sizex, double output_sigma_factor);
+
+    // Obtain sub-window from image, with replication-padding and extract features
+    cv::Mat getFeatures(const cv::Mat & image, int template_size, bool inithann, float scale_adjust = 1.0f);
+
+    // Initialize Hanning window. Function called only in the first frame.
+    bool createHanningMats();
+
+  BOILERPLATE_CODE("KCF",KCFTracker);
+};
+
 //! @}
 
 } /* namespace cv */
